@@ -1,110 +1,96 @@
 program main
   use mndr
 
-  case  = '20170906_40_5x5'          ! <- folder name
+  case  = '20170906_40_5x5'
 
-  call set_parameter
-  call read_fln
-  call read_arry
-  call set_pss
-  call read_roughness
-  call cal_critical_shear_stress
+  call set_parameter  ! You should check first if you change soil diameter
+  call read_fln       ; call read_arry ; call set_pss
+  call read_roughness ; call cal_critical_shear_stress
     
   ! ---- read vtk for dz/dt & dudt(obs) ----
   do n = 1, nend
      call set_arry
      call read_schalar_vtk(dev_bl, 4, 3, pss_st)   ; bl2(:,:,n)    = dev_bl(:,:)
      call read_schalar_vtk(u_cal , 6, 5, pss_iric) ; u_cal2(:,:,n) = u_cal(:,:)
-     call deallocate
+     call deallocate     
   enddo
-  
+
+!!$  call calculate_temporal_slope()
+!!$  if(n.eq.nend)then
+!!$     dz_obs(:,:) = 0.0
+!!$  else
+!!$     dz_obs(:,:) = (bl2(:,:,n+intbl) - bl2(:,:,n)) * 10**3
+!!$  endif
+
   do n = 1, nend, intbl
      call set_arry
      
-     ! ---- read vtk ----
+     ! ---- read vtk of ST ----
      call read_schalar_vtk(dep_obs, 4, 1, pss_st)    ;  call read_schalar_vtk(wl_obs,  4, 2, pss_st)
      call read_schalar_vtk(dev_bl,  4, 3, pss_st)    ;  call read_schalar_vtk(bl    ,  4, 4, pss_st)
 
-!!$     call read_schalar_vtk(dep_obs, 4, 2, pss_st)    ;  call read_schalar_vtk(wl_obs,  4, 1, pss_st)
-!!$     call read_schalar_vtk(dev_bl,  4, 4, pss_st)    ;  call read_schalar_vtk(bl    ,  4, 3, pss_st)
-
+     ! ---- You must unify this vtk & You must fix median and gaussian filter ----
 !!$     call read_schalar_vtk(dwl_obs, 5, 1, pss_st)    ;  call read_schalar_vtk(wl_obs,  5, 2, pss_st)
 !!$     call read_schalar_vtk(dev_bl,  5, 3, pss_st)    ;  call read_schalar_vtk(bl    ,  5, 4, pss_st)
 !!$     call read_schalar_vtk(dep_obs, 5, 5, pss_st)
 
+     ! ---- read vtk of iRIC ----
      call read_schalar_vtk(dep_cal, 6, 1, pss_iric)  ;  call read_schalar_vtk(wl_cal,  6, 2, pss_iric)
      call read_schalar_vtk(u_cal,   6, 5, pss_iric)  ;  call read_schalar_vtk(v_cal ,  6, 6, pss_iric)
 
-     dwl_obs(1,:) = wl_obs(1,:)
-     do i = 2, iend
-        dwl_obs(i,:) = wl_obs(i,:) + 0.05*i*(1./200)
-     enddo
      
-     ! ---- cal slope & curvature ----
-     call calculate_slope(wl_obs, iwi_obs, iwj_obs, iw_obs)
-     call calculate_slope(wl_cal, iwi_cal, iwj_cal, iw_cal)
-     call calculate_slope(bl    , ibi    , ibj    , ib)
-     call calculate_curvature(bl, cbj    , cbi    , cb)
+     ! ---- cal spatial slope  &  curvature  &  energy slope ----
+     call calculate_spatial_slope(wl_obs, iwi_obs, iwj_obs, iw_obs)
+     call calculate_spatial_slope(wl_cal, iwi_cal, iwj_cal, iw_cal)
+     call calculate_spatial_slope(bl    , ibi    , ibj    , ib)
+     call calculate_spatial_curvature(bl, cbj    , cbi    , cb)
      call calculate_energy_slope(nc, dep_cal, u_cal, v_cal, iei, iej, ie)
      vel_cal(:,:)    = sqrt(u_cal(:,:)**2 + v_cal(:,:)**2)
      fr(:,:)         = u_cal(:,:) / sqrt(g * dep_cal(:,:))
 
      
-     ! ---- cal shields_number &  M_equation ----
+     ! ---- cal shields_number  &  M equation  &  Exner equation ----
      call calculate_shields_number(dep_cal, iei, iej, taue_i, taue_j, taue) ; tautau(:,:) = taue_i(:,:) / tauc
      call calculate_Exner_equation_mpm(nc, dep_cal, u_cal, qb_mpm, dz_mpm)
      call calculate_M_equation_mpm_s (nc, dep_cal, iei, ibi, u_cal, Pe_s, Ms, dz_Ms)
      call calculate_M_equation_mpm_u (nc, dep_cal, iei, ibi, u_cal, Pe_u, Mu, dz_Mu)
      call calculate_M_equation_mpm_df(nc, dep_cal, iei, ibi, cbi, u_cal, Md, Df, Pe_d, dz_Md)
 
-     do j = 1, jend
-        ave_crs_dbl(j) = sum(dev_bl(:,j)) / iend
-        ave_crs_dwl(j) = sum(dwl_obs(:,j)) / iend
-     enddo
      
-!!$     do i = 1, iend
-!!$        do j = 1, jend
-!!$           write(*,*)(dz_Mu(i,j)/(1)), (Mu(i,j)*ibi(i,j)), Mu(i,j)*iei(i,j), & 
-!!$                Mu(i,j) / 2 * cbi(i,j) * ( ( x(i,j) - x(i+1,j) ) - Mu(i,j)*(1) )
-!!$           write(*,*)abs(dz_Mu(i,j)/((time2(n+1)-time2(n)) * 60)), abs(Mu(i,j)*ibi(i,j)), mu(i,df)*iei(i,j), & 
-!!$                abs(Mu(i,j) / 2 * cbi(i,j) * (abs(x(i,j)-x(i+1,j)) - Mu(i,j)*((time2(n+1)-time2(n))*60)))
-!!$        enddo
-!!$     enddo
+     ! ---- cal perstent difference between 2 physical quantity ----
+     diano = 'vrbl' ; call calclate_persent_difference(diano, dep_obs, dep_cal, dep_obs, dm, dif_dep)
+     diano = 'cnst' ; call calclate_persent_difference(diano, dz_obs , dz_Ms  , dz_obs , dm, dif_dzs)
+     diano = 'cnst' ; call calclate_persent_difference(diano, dz_obs , dz_Mu  , dz_obs , dm, dif_dzu)
      
-     do i = 1, iend
-        do j = 1, jend
-           lcl(i,j) = dz_Md(i,j) / (10**3 * 600)
-           adv(i,j) = Md(i,j) * ibi(i,j)
-           dff(i,j) = Df(i,j) * cbi(i,j)
-           frc(i,j) = Md(i,j) * iei(i,j)
-        enddo
-     enddo
      
-!!$     Md(:,:) = Md(:,:) * 10**3
-     
-!!$     call calculate_M_equation_mpm_2d(nc, dep_cal, iei, iej, ibi, ibj, u_cal, v_cal, dhdx_mpm, dhdy_mpm, Mx, My, Mxy, dz_mpm)
-!!$     call cal_nondim_celerity(taue_i, fr, iei, Mu, tau_nd, fr_nd, Mu_nd)
-          
-     call calclate_and_compare_dzdt_dhdx     
+!!$     call calclate_and_compare_dzdt_dhdx     
      call cmp_each_item
 
      count = 0
-!!$     call filter(dif_dep, Mu)
-     call filter(Fr, Mu)
-     ave_Mu(n) = sum(Mu(:,:)) / (iend*jend-count)
+!!$     call filter(Fr, Mu)   ! If u wanna use filter(A,B), u should select the filterd B using A
 
-! ---- output_vtk ----
+     ! ---- output schalar vtk  &  vector vtk ----
      call output_schalar_vtk
-     call out_vector_vtk
+     call output_vector_vtk
 
-! ---- drw_cntr ----
+     ! ---- drew some kinds of figure with plplot ----
      call drw_cntr
      
      call deallocate
+     
   end do
   
 end program main
 
+
+!!$     do i = 1, iend
+!!$        do j = 1, jend
+!!$           lcl(i,j) = dz_Md(i,j) / (10**3 * 600)
+!!$           adv(i,j) = Md(i,j) * ibi(i,j)
+!!$           dff(i,j) = Df(i,j) * cbi(i,j)
+!!$           frc(i,j) = Md(i,j) * iei(i,j)
+!!$        enddo
+!!$     enddo
 
 
 
@@ -112,42 +98,51 @@ subroutine set_arry
   use mndr
   
   ! ---- read_schalar_vtk & read_vector_vtk ----
-  allocate(x(iend,jend), y(iend,jend))
-  allocate(dep_obs(iend,jend), wl_obs(iend,jend), dev_bl(iend,jend), bl(iend,jend), dwl_obs(iend,jend))
-  allocate(dep_cal(iend,jend), wl_cal(iend,jend), u_cal(iend,jend) , v_cal(iend,jend))
+  allocate(x(iend,jend)        ,  y(iend,jend))
 
-  ! ---- cal_slope & curvature ----  
-  allocate(iwi_obs(iend,jend), iwj_obs(iend,jend), iw_obs(iend,jend))
-  allocate(iwi_cal(iend,jend), iwj_cal(iend,jend), iw_cal(iend,jend))
-  allocate(cbj(iend,jend)    , cbi(iend,jend)    , cb(iend,jend))
-  allocate(ibi(iend,jend)    , ibj(iend,jend)    , ib(iend,jend))
-  allocate(iei(iend,jend)    , iej(iend,jend)    , ie(iend,jend))
+  ! ---- read vtk of ST ----
+  allocate(dwl_obs(iend,jend)  ,  wl_obs(iend,jend))
+  allocate(dev_bl(iend,jend)   ,  bl(iend,jend))
+  allocate(dep_obs(iend,jend))
 
-  ! ---- cal_tau, as, dz ----
-  allocate(vel_cal(iend,jend), taue_i(iend,jend), taue_j(iend,jend), taue(iend,jend), tautau(iend,jend), Fr(iend,jend))
-  allocate(qb_mpm(iend,jend), dz_mpm(iend,jend))
-  allocate(Pe_s(iend,jend), Ms(iend,jend), dz_Ms(iend,jend))
-  allocate(Pe_u(iend,jend), Mu(iend,jend), dz_Mu(iend,jend))
-  allocate(Pe_d(iend,jend), Md(iend,jend), Df(iend,jend), dz_Md(iend,jend))
-  allocate(lcl(iend,jend) , adv(iend,jend), dff(iend,jend), frc(iend,jend))
-  allocate(Mx(iend,jend)  , My(iend,jend), Mxy(iend,jend))
+  ! ---- read vtk of iRIC ----
+  allocate(dep_cal(iend,jend)  ,  wl_cal(iend,jend))
+  allocate(u_cal(iend,jend)    ,  v_cal(iend,jend))
 
-  ! ---- cal and cmp dzdt & dhdx ----
-  allocate(dz_obs(iend,jend)   , dz_amf(iend,jend))
-  allocate(dif_dep(iend,jend)  , dif_dzs(iend,jend)  , dif_dzu(iend,jend), dif_dzd(iend,jend), dif_dzmpm(iend,jend))
-  allocate(dhdx_obs(iend,jend) , dhdy_obs(iend,jend))
-  allocate(dhdx_Mu(iend,jend)  , dhdy_Mu(iend,jend))
-  allocate(dhdx_Ms(iend,jend)  , dhdx_Md(iend,jend))
-  allocate(dif_dhdxs(iend,jend), dif_dhdys(iend,jend))
-  allocate(dif_dhdxu(iend,jend), dif_dhdyu(iend,jend))
+  ! ---- cal slope  &  curvature  &  energy slope ----  
+  allocate(iwi_obs(iend,jend)  ,  iwj_obs(iend,jend),  iw_obs(iend,jend))
+  allocate(iwi_cal(iend,jend)  ,  iwj_cal(iend,jend),  iw_cal(iend,jend))
+  allocate(cbj(iend,jend)      ,  cbi(iend,jend)    ,  cb(iend,jend))
+  allocate(ibi(iend,jend)      ,  ibj(iend,jend)    ,  ib(iend,jend))
+  allocate(iei(iend,jend)      ,  iej(iend,jend)    ,  ie(iend,jend))
+  allocate(vel_cal(iend,jend)  ,  Fr(iend,jend))
   
-  allocate(ave_crs_dbl(jend), ave_crs_dwl(jend))
+  ! ---- cal shields_number  &  M equation  &  Exner equation ----
+  allocate(taue_i(iend,jend)   ,  taue_j(iend,jend) ,  taue(iend,jend)   ,  tautau(iend,jend))
+  allocate(qb_mpm(iend,jend)   ,  dz_mpm(iend,jend))
+  allocate(Pe_s(iend,jend)     ,  Ms(iend,jend)     ,  dz_Ms(iend,jend))
+  allocate(Pe_u(iend,jend)     ,  Mu(iend,jend)     ,  dz_Mu(iend,jend))
+  allocate(Pe_d(iend,jend)     ,  Md(iend,jend)     ,  Df(iend,jend)     ,  dz_Md(iend,jend))
+  allocate(lcl(iend,jend)      ,  adv(iend,jend)    ,  dff(iend,jend)    ,  frc(iend,jend))
+  allocate(Mx(iend,jend)       ,  My(iend,jend)     ,  Mxy(iend,jend))
+
+  
+  ! ---- cal and cmp dzdt & dhdx ----
+  allocate(dz_obs(iend,jend)   ,  dz_amf(iend,jend))
+  allocate(dif_dep(iend,jend)  ,  dif_dzs(iend,jend),  dif_dzu(iend,jend),  dif_dzd(iend,jend),  dif_dzmpm(iend,jend))
+  allocate(dhdx_obs(iend,jend) ,  dhdy_obs(iend,jend))
+  allocate(dhdx_Mu(iend,jend)  ,  dhdy_Mu(iend,jend))
+  allocate(dhdx_Ms(iend,jend)  ,  dhdx_Md(iend,jend))
+  allocate(dif_dhdxs(iend,jend),  dif_dhdys(iend,jend))
+  allocate(dif_dhdxu(iend,jend),  dif_dhdyu(iend,jend))
+  
+  allocate(ave_crs_dbl(jend)   ,  ave_crs_dwl(jend))
   
   ! ---- cal_nondim ----
-  allocate(tau_nd(iend,jend), fr_nd(iend,jend), Mu_nd(iend,jend))  
+  allocate(tau_nd(iend,jend)   ,  fr_nd(iend,jend)  ,  Mu_nd(iend,jend))  
  
   ! ---- cmp_each_item ---- 
-  allocate(dudt(iend,jend), dudx(iend,jend), asu(iend,jend))
+  allocate(dudt(iend,jend)     ,  dudx(iend,jend)   ,  asu(iend,jend))
 
 end subroutine set_arry
 
@@ -167,7 +162,7 @@ subroutine deallocate
   deallocate(cbj, cbi, cb)
   deallocate(iei, iej, ie)
   deallocate(ibi, ibj, ib)
-  deallocate(Fr , vel_cal)    
+  deallocate(vel_cal , Fr)
   
   ! ---- cal_tau, pe, dz ----
   deallocate(taue_i, taue_j, taue, tautau)
@@ -443,7 +438,7 @@ end subroutine calculate_velocity
 
 
 
-subroutine calculate_slope(wl, slpi, slpj, slp)
+subroutine calculate_spatial_slope(wl, slpi, slpj, slp)
   use mndr
   real*8,intent(in)  :: wl(iend,jend)
   real*8,intent(out) :: slpi(iend,jend), slpj(iend,jend), slp(iend,jend)
@@ -478,11 +473,11 @@ subroutine calculate_slope(wl, slpi, slpj, slp)
      enddo
   enddo
   
-end subroutine calculate_slope
+end subroutine calculate_spatial_slope
 
 
 
-subroutine calculate_curvature(wl, curi, curj, cur)
+subroutine calculate_spatial_curvature(wl, curi, curj, cur)
   use mndr
   real*8,intent(in)  :: wl(iend,jend)
   real*8,intent(out) :: curi(iend,jend), curj(iend,jend), cur(iend,jend)
@@ -523,7 +518,7 @@ subroutine calculate_curvature(wl, curi, curj, cur)
      enddo
   enddo
   
-end subroutine calculate_curvature
+end subroutine calculate_spatial_curvature
 
 
 
@@ -844,58 +839,83 @@ end subroutine cal_nondim_celerity
 
 
 
-subroutine calclate_and_compare_dzdt_dhdx
+subroutine calclate_persent_difference(dianometer, molc_l, molc_r, dia_1, dia_2, dif)
   use mndr
-  ! ---- dzdt ----
-  if(n.eq.nend)then
-     dz_obs(:,:) = 0.0
-  else
-     dz_obs(:,:) = (bl2(:,:,n+intbl) - bl2(:,:,n)) * 10**3
+  character*100, intent(in)  :: dianometer
+  real*8       , intent(in)  :: molc_l(iend,jend), molc_r(iend,jend), dia_1(iend, jend), dia_2
+  real*8       , intent(out) :: dif(iend,jend)
+
+  if(trim(dianometer) .eq. 'vrbl')then
+     do i = 1, iend
+        do j = 1, jend
+           dif(i,j) = abs(molc_l(i,j) - molc_r(i,j)) / dia_1(i,j) * 100
+        enddo
+     enddo
+  elseif(trim(dianometer) .eq. 'cnst')then
+     do i = 1, iend
+        do j = 1, jend
+           dif(i,j) = abs(molc_l(i,j) - molc_r(i,j)) / dia_2 * 100
+        enddo
+     enddo     
   endif
-  
-  dif_dep(:,:)   = abs(( dep_obs(:,:) - dep_cal(:,:) ) / dep_obs(:,:) * 100)     
-  dif_dzs (:,:)  = abs(dz_obs(:,:) - dz_Ms(:,:))  / 0.76 * 100
-  dif_dzu(:,:)   = abs(dz_obs(:,:) - dz_Mu(:,:))  / 0.76 * 100
-  dif_dzd(:,:)   = abs(dz_obs(:,:) - dz_Md(:,:))  / 0.76 * 100
-  dif_dzmpm(:,:) = abs(dz_obs(:,:) - dz_mpm(:,:)) / 0.76 * 100
 
-  do i = 1, iend
-     do j = 1, jend
-        dhdx_Ms(i,j) = (ibi(i,j) - iei(i,j)) / (1 - fr(i,j)**2)
-        dhdx_Mu(i,j) = (ibi(i,j) - iei(i,j)) / (1 + 4./3. * fr(i,j)**2)
-     enddo
-  enddo
+end subroutine calclate_persent_difference
 
-  ! ---- dhdx,dhdy ----
-  do i = 1, iend
-     do j = 1, jend
-        if(i.eq.1)then
-           dhdx_obs(i,j)      = (dep_obs(i+1,j) - dep_obs(i,j))   / (x(i+1,j) - x(i,j))
-        elseif(i.eq.iend)then
-           dhdx_obs(i,j)      = (dep_obs(i,j) - dep_obs(i-1,j))   / (x(i,j) - x(i-1,j))
-        else
-           dhdx_obs(i,j)      = (dep_obs(i+1,j) - dep_obs(i-1,j)) / (x(i+1,j) - x(i-1,j))
-        endif
-     enddo
-  enddo
 
-  do i = 1, iend
-     do j = 1, jend
-        if(j.eq.1)then
-           dhdy_obs(i,j)      = (dep_obs(i,j+1) - dep_obs(i,j))   / (y(i,j+1) - y(i,j))
-        elseif(j.eq.jend)then
-           dhdy_obs(i,j)      = (dep_obs(i,j) - dep_obs(i,j-1))   / (y(i,j) - y(i,j-1))
-        else
-           dhdy_obs(i,j)      = (dep_obs(i,j+1) - dep_obs(i,j-1)) / (y(i,j+1) - y(i,j-1))
-        endif
-     enddo
-  enddo
 
-  dif_dhdxs(:,:) = abs((dhdx_Ms(:,:) - dhdx_obs(:,:)) / dhdx_obs(:,:)) * 100
-  dif_dhdxu(:,:) = abs((dhdx_Mu(:,:) - dhdx_obs(:,:)) / dhdx_obs(:,:)) * 100  
-  dif_dhdyu(:,:) = abs((dhdy_Mu(:,:) - dhdy_obs(:,:)) / dhdy_obs(:,:)) * 100
-
-end subroutine calclate_and_compare_dzdt_dhdx
+!!$subroutine calclate_and_compare_dzdt_dhdx
+!!$  use mndr
+!!$  ! ---- dzdt ----
+!!$  if(n.eq.nend)then
+!!$     dz_obs(:,:) = 0.0
+!!$  else
+!!$     dz_obs(:,:) = (bl2(:,:,n+intbl) - bl2(:,:,n)) * 10**3
+!!$  endif
+!!$  
+!!$  dif_dep(:,:)   = abs(( dep_obs(:,:) - dep_cal(:,:) ) / dep_obs(:,:) * 100)     
+!!$  dif_dzs (:,:)  = abs(dz_obs(:,:)    - dz_Ms(:,:))    / 0.76 * 100
+!!$  dif_dzu(:,:)   = abs(dz_obs(:,:)    - dz_Mu(:,:))    / 0.76 * 100
+!!$  dif_dzd(:,:)   = abs(dz_obs(:,:)    - dz_Md(:,:))    / 0.76 * 100
+!!$  dif_dzmpm(:,:) = abs(dz_obs(:,:)    - dz_mpm(:,:))   / 0.76 * 100
+!!$
+!!$  do i = 1, iend
+!!$     do j = 1, jend
+!!$        dhdx_Ms(i,j) = (ibi(i,j) - iei(i,j)) / (1 - fr(i,j)**2)
+!!$        dhdx_Mu(i,j) = (ibi(i,j) - iei(i,j)) / (1 + 4./3. * fr(i,j)**2)
+!!$     enddo
+!!$  enddo
+!!$
+!!$  ! ---- dhdx,dhdy ----
+!!$  ! ============================= can use slope =========================
+!!$  do i = 1, iend
+!!$     do j = 1, jend
+!!$        if(i.eq.1)then
+!!$           dhdx_obs(i,j)      = (dep_obs(i+1,j) - dep_obs(i,j))   / (x(i+1,j) - x(i,j))
+!!$        elseif(i.eq.iend)then
+!!$           dhdx_obs(i,j)      = (dep_obs(i,j) - dep_obs(i-1,j))   / (x(i,j) - x(i-1,j))
+!!$        else
+!!$           dhdx_obs(i,j)      = (dep_obs(i+1,j) - dep_obs(i-1,j)) / (x(i+1,j) - x(i-1,j))
+!!$        endif
+!!$     enddo
+!!$  enddo
+!!$
+!!$  do i = 1, iend
+!!$     do j = 1, jend
+!!$        if(j.eq.1)then
+!!$           dhdy_obs(i,j)      = (dep_obs(i,j+1) - dep_obs(i,j))   / (y(i,j+1) - y(i,j))
+!!$        elseif(j.eq.jend)then
+!!$           dhdy_obs(i,j)      = (dep_obs(i,j) - dep_obs(i,j-1))   / (y(i,j) - y(i,j-1))
+!!$        else
+!!$           dhdy_obs(i,j)      = (dep_obs(i,j+1) - dep_obs(i,j-1)) / (y(i,j+1) - y(i,j-1))
+!!$        endif
+!!$     enddo
+!!$  enddo
+!!$
+!!$  dif_dhdxs(:,:) = abs((dhdx_Ms(:,:) - dhdx_obs(:,:)) / dhdx_obs(:,:)) * 100
+!!$  dif_dhdxu(:,:) = abs((dhdx_Mu(:,:) - dhdx_obs(:,:)) / dhdx_obs(:,:)) * 100  
+!!$  dif_dhdyu(:,:) = abs((dhdy_Mu(:,:) - dhdy_obs(:,:)) / dhdy_obs(:,:)) * 100
+!!$
+!!$end subroutine calclate_and_compare_dzdt_dhdx
 
 
 
@@ -941,7 +961,8 @@ subroutine output_schalar_vtk
 
   write(100,*)
   write(100,'(a,5x,i8)')'POINT_DATA', iend * jend
-  write(100,'(a,5x,i8)')'FIELD FieldData', 11
+  write(100,'(a,5x,i8)')'FIELD FieldData', 6
+!!$  write(100,'(a,5x,i8)')'FIELD FieldData', 11
  
   call out_scalar(dev_bl,          'Deviation_of_bedlevel')
   call out_scalar(dep_cal,         'depth')    
@@ -949,11 +970,11 @@ subroutine output_schalar_vtk
   call out_scalar(Mu,              'celerity_unsteady')
   call out_scalar(tautau,          'tautau')
   call out_scalar(u_cal,           'velocity_i')
-  call out_scalar(dz_Mu,         'dz_Mu')
-  call out_scalar(dz_obs,         'dz_obs')
-  call out_scalar(dz_mpm,         'dz_mpm')
-  call out_scalar(dif_dzu,         'dif_dz_u')
-  call out_scalar(dif_dzmpm,       'dif_d_mpm')
+!!$  call out_scalar(dz_Mu,         'dz_Mu')
+!!$  call out_scalar(dz_obs,         'dz_obs')
+!!$  call out_scalar(dz_mpm,         'dz_mpm')
+!!$  call out_scalar(dif_dzu,         'dif_dz_u')
+!!$  call out_scalar(dif_dzmpm,       'dif_d_mpm')
   
   ! call out_scalar(iei,               'Energy_slope')
   ! call out_scalar(tautau,            'effective_sheilds_number')
@@ -985,7 +1006,7 @@ end subroutine out_scalar
 
 
 
-subroutine out_vector_vtk
+subroutine output_vector_vtk
   use mndr
 
   intrvl_i = 1
@@ -1034,7 +1055,7 @@ subroutine out_vector_vtk
   
   close(100)
 
-end subroutine out_vector_vtk
+end subroutine output_vector_vtk
 
 
 

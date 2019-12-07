@@ -42,7 +42,10 @@ Module mndr
   real*8,dimension(:,:),allocatable   :: lcl   , adv   , dff  , frc
   real*8,dimension(:,:),allocatable   :: Mx    , My    , Mxy
   real*8,dimension(:),allocatable     :: ave_Mu
-  
+
+  ! ---- cal perstent difference between 2 physical quantity ----
+  character*100 :: diano
+
   ! ---- cal and cmp dzdt & dhdx ----
   real*8,dimension(:,:),allocatable   :: dz_obs
   real*8,dimension(:,:),allocatable   :: dif_dep  , dif_dzs , dif_dzd, dif_dzu, dif_dzmpm
