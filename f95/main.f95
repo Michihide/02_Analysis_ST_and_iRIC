@@ -15,13 +15,6 @@ program main
      call deallocate     
   enddo
 
-!!$  call calculate_temporal_slope()
-!!$  if(n.eq.nend)then
-!!$     dz_obs(:,:) = 0.0
-!!$  else
-!!$     dz_obs(:,:) = (bl2(:,:,n+intbl) - bl2(:,:,n)) * 10**3
-!!$  endif
-
   do n = 1, nend, intbl
      call set_arry
      
@@ -56,14 +49,15 @@ program main
      call calculate_M_equation_mpm_u (nc, dep_cal, iei, ibi, u_cal, Pe_u, Mu, dz_Mu)
      call calculate_M_equation_mpm_df(nc, dep_cal, iei, ibi, cbi, u_cal, Md, Df, Pe_d, dz_Md)
 
+     ! ---- cal temporal slope ----
+     call calculate_temporal_slope(bl2, dz_obs)
+  
      
      ! ---- cal perstent difference between 2 physical quantity ----
      diano = 'vrbl' ; call calclate_persent_difference(diano, dep_obs, dep_cal, dep_obs, dm, dif_dep)
      diano = 'cnst' ; call calclate_persent_difference(diano, dz_obs , dz_Ms  , dz_obs , dm, dif_dzs)
      diano = 'cnst' ; call calclate_persent_difference(diano, dz_obs , dz_Mu  , dz_obs , dm, dif_dzu)
-     
-     
-!!$     call calclate_and_compare_dzdt_dhdx     
+          
      call cmp_each_item
 
      count = 0
@@ -435,6 +429,21 @@ subroutine calculate_velocity(rough, dep, slpi, slpj, veli, velj)
   endif
   
 end subroutine calculate_velocity
+
+
+
+subroutine calculate_temporal_slope(slp_in, slp_out)
+  use mndr
+  real*8,intent(in)  :: slp_in(iend,jend,nend)
+  real*8,intent(out) :: slp_out(iend,jend)
+  
+  if(n.eq.nend)then
+     slp_out(:,:) = 0.0
+  else
+     slp_out(:,:) = (slp_in(:,:,n+intbl) - slp_in(:,:,n))
+  endif
+
+end subroutine calculate_temporal_slope
 
 
 
