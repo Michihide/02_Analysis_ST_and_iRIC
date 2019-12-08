@@ -18,11 +18,11 @@ program main
   do n = 1, nend, intbl
      call set_arry
      
-     ! ---- read vtk of ST ----
-     call read_schalar_vtk(dep_obs, 4, 1, pss_st)    ;  call read_schalar_vtk(wl_obs,  4, 2, pss_st)
-     call read_schalar_vtk(dev_bl,  4, 3, pss_st)    ;  call read_schalar_vtk(bl    ,  4, 4, pss_st)
+     ! ---- read vtk of ST (You should use this read_schalar_vtk after 2018)----
+!!$     call read_schalar_vtk(dep_obs, 4, 1, pss_st)    ;  call read_schalar_vtk(wl_obs,  4, 2, pss_st)
+!!$     call read_schalar_vtk(dev_bl,  4, 3, pss_st)    ;  call read_schalar_vtk(bl    ,  4, 4, pss_st)
 
-     ! ---- You must unify this vtk & You must fix median and gaussian filter ----
+     ! ---- read vtk of ST You should use this read_schalar_vtk after 2019 ----
 !!$     call read_schalar_vtk(dwl_obs, 5, 1, pss_st)    ;  call read_schalar_vtk(wl_obs,  5, 2, pss_st)
 !!$     call read_schalar_vtk(dev_bl,  5, 3, pss_st)    ;  call read_schalar_vtk(bl    ,  5, 4, pss_st)
 !!$     call read_schalar_vtk(dep_obs, 5, 5, pss_st)
@@ -40,7 +40,6 @@ program main
      call calculate_energy_slope(nc, dep_cal, u_cal, v_cal, iei, iej, ie)
      vel_cal(:,:)    = sqrt(u_cal(:,:)**2 + v_cal(:,:)**2)
      fr(:,:)         = u_cal(:,:) / sqrt(g * dep_cal(:,:))
-
      
      ! ---- cal shields_number  &  M equation  &  Exner equation ----
      call calculate_shields_number(dep_cal, iei, iej, taue_i, taue_j, taue) ; tautau(:,:) = taue_i(:,:) / tauc
@@ -51,8 +50,7 @@ program main
 
      ! ---- cal temporal slope ----
      call calculate_temporal_slope(bl2, dz_obs)
-  
-     
+       
      ! ---- cal perstent difference between 2 physical quantity ----
      diano = 'vrbl' ; call calclate_persent_difference(diano, dep_obs, dep_cal, dep_obs, dm, dif_dep)
      diano = 'cnst' ; call calclate_persent_difference(diano, dz_obs , dz_Ms  , dz_obs , dm, dif_dzs)
