@@ -21,3 +21,4 @@ val_cmap.mod
 02_input_as_obs/20170906_40_5x5_bar_point_2.txt
 f95/..opt_idiv446_us_40h_mvbl_1.vtk
 f95/..opt_idiv446_us_40h_rc_mvbl_1.vtk
+.#main.f95
