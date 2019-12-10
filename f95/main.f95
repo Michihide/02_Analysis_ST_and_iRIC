@@ -18,7 +18,7 @@ program main
   do n = 1, nend, intbl
      call set_arry
      
-     ! ---- read vtk of ST You should use this read_schalar_vtk after 2019 ----
+     ! ---- read vtk of ST (updated 2019/12/05 for data of 2019) ----
      call read_schalar_vtk(dwl_obs, 5, 1, pss_st)    ;  call read_schalar_vtk(wl_obs,  5, 2, pss_st)
      call read_schalar_vtk(dev_bl,  5, 3, pss_st)    ;  call read_schalar_vtk(bl    ,  5, 4, pss_st)
      call read_schalar_vtk(dep_obs, 5, 5, pss_st)
@@ -26,9 +26,8 @@ program main
      ! ---- read vtk of iRIC ----
      call read_schalar_vtk(dep_cal, 6, 1, pss_iric)  ;  call read_schalar_vtk(wl_cal,  6, 2, pss_iric)
      call read_schalar_vtk(u_cal,   6, 5, pss_iric)  ;  call read_schalar_vtk(v_cal ,  6, 6, pss_iric)
-
      
-     ! ---- cal spatial slope  &  curvature  &  energy slope ----
+     ! ---- calculate spatial slope  &  curvature  &  energy slope ----
      call calculate_spatial_slope(wl_obs, iwi_obs, iwj_obs, iw_obs)
      call calculate_spatial_slope(wl_cal, iwi_cal, iwj_cal, iw_cal)
      call calculate_spatial_slope(bl    , ibi    , ibj    , ib)
@@ -37,35 +36,27 @@ program main
      vel_cal(:,:)    = sqrt(u_cal(:,:)**2 + v_cal(:,:)**2)
      fr(:,:)         = u_cal(:,:) / sqrt(g * dep_cal(:,:))
      
-     ! ---- cal shields_number  &  M equation  &  Exner equation ----
+     ! ---- calculate shields_number  &  M equation  &  Exner equation ----
      call calculate_shields_number(dep_cal, iei, iej, taue_i, taue_j, taue) ; tautau(:,:) = taue_i(:,:) / tauc
      call calculate_Exner_equation_mpm(nc, dep_cal, u_cal, qb_mpm, dz_mpm)
      call calculate_M_equation_mpm_s (nc, dep_cal, iei, ibi, u_cal, Pe_s, Ms, dz_Ms)
      call calculate_M_equation_mpm_u (nc, dep_cal, iei, ibi, u_cal, Pe_u, Mu, dz_Mu)
      call calculate_M_equation_mpm_df(nc, dep_cal, iei, ibi, cbi, u_cal, Md, Df, Pe_d, dz_Md)
 
-     ! ---- cal temporal slope ----
+     ! ---- calculate temporal slope ----
      call calculate_temporal_slope(bl2, dz_obs)
        
-     ! ---- cal perstent difference between 2 physical quantity ----
+     ! ---- calculate perstent difference between 2 physical quantity ----
      diano = 'vrbl' ; call calclate_persent_difference(diano, dep_obs, dep_cal, dep_obs, dm, dif_dep)
      diano = 'cnst' ; call calclate_persent_difference(diano, dz_obs , dz_Ms  , dz_obs , dm, dif_dzs)
      diano = 'vrbl' ; call calclate_persent_difference(diano, dz_obs , dz_Mu  , dz_obs , dm, dif_dzu)
           
-     call cmp_each_item
-
      count = 0
 !!$     call filter(Fr, Mu)   ! If u wanna use filter(A,B), u should select the filterd B using A
 
      ! ---- output schalar vtk  &  vector vtk ----
      call output_schalar_vtk
      call output_vector_vtk
-
-!!$     do i = 1, iend
-!!$        do j = 1, jend
-!!$           write(*,*)dz_obs(i,j), dz_Mu(i,j)           
-!!$        enddo
-!!$     enddo
 
      ! ---- drew some kinds of figure with plplot ----
      call drw_cntr
@@ -91,10 +82,8 @@ end program main
 subroutine set_arry
   use mndr
   
-  ! ---- read_schalar_vtk & read_vector_vtk ----
-  allocate(x(iend,jend)        ,  y(iend,jend))
-
   ! ---- read vtk of ST ----
+  allocate(x(iend,jend)        ,  y(iend,jend))
   allocate(dwl_obs(iend,jend)  ,  wl_obs(iend,jend))
   allocate(dev_bl(iend,jend)   ,  bl(iend,jend))
   allocate(dep_obs(iend,jend))
@@ -116,28 +105,32 @@ subroutine set_arry
   allocate(qb_mpm(iend,jend)   ,  dz_mpm(iend,jend))
   allocate(Pe_s(iend,jend)     ,  Ms(iend,jend)     ,  dz_Ms(iend,jend))
   allocate(Pe_u(iend,jend)     ,  Mu(iend,jend)     ,  dz_Mu(iend,jend))
-  allocate(Pe_d(iend,jend)     ,  Md(iend,jend)     ,  Df(iend,jend)     ,  dz_Md(iend,jend))
+  allocate(Pe_d(iend,jend)     ,  Md(iend,jend)     ,  Df(iend,jend)     ,  dz_Md(iend,jend), dz_amf(iend,jend))
   allocate(lcl(iend,jend)      ,  adv(iend,jend)    ,  dff(iend,jend)    ,  frc(iend,jend))
   allocate(Mx(iend,jend)       ,  My(iend,jend)     ,  Mxy(iend,jend))
 
+  ! ---- calculate temporal slope ----
+  allocate(dz_obs(iend,jend))
   
-  ! ---- cal and cmp dzdt & dhdx ----
-  allocate(dz_obs(iend,jend)   ,  dz_amf(iend,jend))
+  ! ---- calculate perstent difference between 2 physical quantity ----
   allocate(dif_dep(iend,jend)  ,  dif_dzs(iend,jend),  dif_dzu(iend,jend),  dif_dzd(iend,jend),  dif_dzmpm(iend,jend))
+  
+  ! ---- I should make subroutine to calculate below parameter ----    
   allocate(dhdx_obs(iend,jend) ,  dhdy_obs(iend,jend))
   allocate(dhdx_Mu(iend,jend)  ,  dhdy_Mu(iend,jend))
   allocate(dhdx_Ms(iend,jend)  ,  dhdx_Md(iend,jend))
   allocate(dif_dhdxs(iend,jend),  dif_dhdys(iend,jend))
   allocate(dif_dhdxu(iend,jend),  dif_dhdyu(iend,jend))
-  
+
+  ! ---- cal average crs ans lng (unuse now(2019/12/05), It's just stay in order to use if I wanna use) ----
   allocate(ave_crs_dbl(jend)   ,  ave_crs_dwl(jend))
-  
-  ! ---- cal_nondim ----
-  allocate(tau_nd(iend,jend)   ,  fr_nd(iend,jend)  ,  Mu_nd(iend,jend))  
- 
-  ! ---- cmp_each_item ---- 
+
+  ! ---- cmp_each_item  (unuse now(2019/12/05), It's just stay in order to use if I wanna use) ---- 
   allocate(dudt(iend,jend)     ,  dudx(iend,jend)   ,  asu(iend,jend))
 
+  ! ----  cal_nondim_celerity  (unuse now(2019/12/05), It's just stay in order to use if I wanna use) ----
+  allocate(tau_nd(iend,jend)   ,  fr_nd(iend,jend)  ,  Mu_nd(iend,jend))  
+ 
 end subroutine set_arry
 
 
@@ -145,45 +138,52 @@ end subroutine set_arry
 subroutine deallocate
   use mndr
   
-  ! ---- read_schalar_vtk & read_vector_vtk ----
+  ! ---- read vtk of ST ----
   deallocate(x, y)
-  deallocate(dep_obs, wl_obs, dev_bl, bl, dwl_obs)
-  deallocate(dep_cal, wl_cal, u_cal, v_cal)
+  deallocate(dep_obs , wl_obs, dev_bl, bl, dwl_obs)
+
+  ! ---- read vtk of iRIC ----
+  deallocate(dep_cal , wl_cal, u_cal, v_cal)
     
-  ! ---- cal_slope ----
-  deallocate(iwi_obs, iwj_obs, iw_obs)
-  deallocate(iwi_cal, iwj_cal, iw_cal)
+  ! ---- cal slope  &  curvature  &  energy slope ----  
+  deallocate(iwi_obs , iwj_obs, iw_obs)
+  deallocate(iwi_cal , iwj_cal, iw_cal)
   deallocate(cbj, cbi, cb)
   deallocate(iei, iej, ie)
   deallocate(ibi, ibj, ib)
   deallocate(vel_cal , Fr)
   
-  ! ---- cal_tau, pe, dz ----
+  ! ---- cal shields_number  &  M equation  &  Exner equation ----
   deallocate(taue_i, taue_j, taue, tautau)
   deallocate(qb_mpm, dz_mpm)
   deallocate(Pe_s, Ms, dz_Ms)
   deallocate(Pe_u, Mu, dz_Mu)
-  deallocate(Pe_d, Md, Df, dz_Md)
+  deallocate(Pe_d, Md, Df, dz_Md, dz_amf)
   deallocate(lcl , adv, dff, frc)
   deallocate(Mx  , My, Mxy)
 
-  ! ---- cal_nondim ----
-  deallocate(tau_nd,fr_nd,Mu_nd)
-  
-  ! ---- cal and cmp dzdt & dhdx ----  
-  deallocate(dz_obs   , dz_amf)
+  ! ---- calculate temporal slope ----
+  deallocate(dz_obs)
+
+  ! ---- calculate perstent difference between 2 physical quantity ----
   deallocate(dif_dep  , dif_dzs  , dif_dzu, dif_dzd, dif_dzmpm)
+  
+  ! ---- cal average crs ans lng (unuse now(2019/12/05), It's just stay in order to use if I wanna use) ----
+  deallocate(ave_crs_dbl, ave_crs_dwl)
+  
+  ! ---- I should make subroutine to calculate below parameter ----    
   deallocate(dhdx_obs , dhdy_obs)
   deallocate(dhdx_Mu  , dhdy_Mu)
   deallocate(dhdx_Ms  , dhdx_Md)
   deallocate(dif_dhdxs, dif_dhdys)
   deallocate(dif_dhdxu, dif_dhdyu)
-
-  deallocate(ave_crs_dbl, ave_crs_dwl)
   
- ! ---- cmp_each_item ----   
+  ! ---- cmp_each_item  (unuse now(2019/12/05), It's just stay in order to use if I wanna use) ---- 
   deallocate(dudt, dudx, asu) 
-  
+
+  ! ----  cal_nondim_celerity  (unuse now(2019/12/05), It's just stay in order to use if I wanna use) ----
+  deallocate(tau_nd,fr_nd,Mu_nd)
+
 end subroutine deallocate
 
 
