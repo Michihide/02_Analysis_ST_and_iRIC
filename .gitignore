@@ -22,3 +22,7 @@ val_cmap.mod
 f95/..opt_idiv446_us_40h_mvbl_1.vtk
 f95/..opt_idiv446_us_40h_rc_mvbl_1.vtk
 .#main.f95
+mndr 2.o
+01_input_manning/20191205_2x2_6_Manning.txt
+01_input_manning/20191205_2x2_8_Manning.txt
+01_input_manning/20191205_Manning.txt
