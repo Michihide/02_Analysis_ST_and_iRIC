@@ -32,7 +32,7 @@ subroutine drw_cntr
   ymin = minval(y) - (maxval(y)-minval(y))*0.1d0
   ymax = maxval(y) + (maxval(y)-minval(y))*0.1d0
   zmin = 0.03d0
-  zmax = 0.05d0
+  zmax = 0.06d0
 !!$  zmin = minval(dev_bl) - (maxval(dev_bl)-minval(dev_bl))*0.1d0
 !!$  zmax = maxval(dev_bl) + (maxval(dev_bl)-minval(dev_bl))*0.1d0  
 
@@ -113,7 +113,7 @@ subroutine drw_cntr
   axis_t   = trim(fln2(n))
   axis_b   = ''
   ! axis_b   = 'Distance from upstream [m]'
-  clrnm    = 3
+  clrnm    = 5
 
   xmin = minval(x) - (maxval(x)-minval(x))*0.02d0
   xmax = maxval(x) + (maxval(x)-minval(x))*0.02d0
@@ -121,8 +121,8 @@ subroutine drw_cntr
   ymax = maxval(y) + (maxval(y)-minval(y))*0.1d0
   zmin =  0.0d0
   zmax =  0.5d0
-  zmin = minval(mu) - (maxval(mu)-minval(mu))*0.1d0
-  zmax = maxval(mu) + (maxval(mu)-minval(mu))*0.1d0  
+!!$  zmin = minval(mu) - (maxval(mu)-minval(mu))*0.1d0
+!!$  zmax = maxval(mu) + (maxval(mu)-minval(mu))*0.1d0  
 
   pymin = pymin - pdy ; pymax = pymax - pdy
   

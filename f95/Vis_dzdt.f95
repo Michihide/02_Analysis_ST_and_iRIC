@@ -31,7 +31,7 @@ subroutine drw_cntr
   ymax = maxval(y) + (maxval(y)-minval(y))*0.1d0
 !!$  zmin = minval(dev_bl) - (maxval(dev_bl)-minval(dev_bl))*0.1d0
 !!$  zmax = maxval(dev_bl) + (maxval(dev_bl)-minval(dev_bl))*0.1d0
-  zmin = 0.04d0 ; zmax = 0.06d0
+  zmin = 0.03d0 ; zmax = 0.06d0
 !!$  zmin = 0.03d0 ; zmax = 0.05d0
 
   pxmin = 0.1d0  ; pxmax = 0.90d0
@@ -81,7 +81,8 @@ subroutine drw_cntr
   call pljoin(x(1,jend-2),y(1,jend-2),x(iend,jend-2),y(iend,jend-2))
   call colbar(0.d0, 1.d0, zmin, zmax, pxmax+0.02d0, pxmax+0.03d0, pymin, pymax, trim(barsname))
   !------------------------------------------
-  
+
+
 !!$  !---- cntr of dz_Mu ---------------
 !!$  barsname = 'dz_mpm[mm]'
 !!$  axis_l   = 'Width(m)'
@@ -138,6 +139,34 @@ subroutine drw_cntr
   call pljoin(x(1,jend-2),y(1,jend-2),x(iend,jend-2),y(iend,jend-2))
   call colbar(0.d0, 1.d0, zmin, zmax, pxmax+0.02d0, pxmax+0.03d0, pymin, pymax, trim(barsname))
   !------------------------------------------
+
+!!$  ! ---- cntr of D.B.L ---------------
+!!$  barsname = 'v_cal [m/s]'
+!!$  axis_l   = 'Width(m)'
+!!$  ! axis_t = ''
+!!$  axis_t   = trim(fln2(n))
+!!$  axis_b   = ''
+!!$  ! axis_b   = 'Distance from upstream [m]'
+!!$  clrnm    = 3
+!!$
+!!$  xmin = minval(x) - (maxval(x)-minval(x))*0.02d0
+!!$  xmax = maxval(x) + (maxval(x)-minval(x))*0.02d0
+!!$  ymin = minval(y) - (maxval(y)-minval(y))*0.1d0
+!!$  ymax = maxval(y) + (maxval(y)-minval(y))*0.1d0
+!!$  zmin =  -0.1d0
+!!$  zmax =   0.1d0
+!!$  zmin = minval(mu) - (maxval(mu)-minval(mu))*0.1d0
+!!$  zmax = maxval(mu) + (maxval(mu)-minval(mu))*0.1d0  
+!!$
+!!$  pymin = pymin - pdy ; pymax = pymax - pdy
+!!$
+!!$  call set_window(xmin, xmax, ymin, ymax, trim(axis_b), trim(axis_l), trim(axis_t), pxmin, pxmax, pymin, pymax)
+!!$  call set_clr_cntr(clrnm, zmin, zmax)
+!!$  call plot_cntr(1, iend, 1, jend, x, y, v_cal)
+!!$  call plcol0(9)
+!!$  ! call pljoin(x(1,jend-1),y(1,jend-1),x(iend,jend-1),y(iend,jend-1))
+!!$  call colbar(0.d0, 1.d0, zmin, zmax, pxmax+0.02d0, pxmax+0.03d0, pymin, pymax, trim(barsname))
+!!$  !------------------------------------------
 
 !!$  !---- cntr of dz_Mu ---------------
 !!$  barsname = 'dz_Md[mm]'
@@ -203,7 +232,7 @@ subroutine drw_cntr
   ymin = minval(y) - (maxval(y)-minval(y))*0.1d0
   ymax = maxval(y) + (maxval(y)-minval(y))*0.1d0
   zmin = 0.0d0
-  zmax = 2000.0d0
+  zmax = 1000.0d0
 
   pymin = pymin - pdy ; pymax = pymax - pdy
     
@@ -277,25 +306,51 @@ subroutine drw_cntr
 
 
 
-!!$  !---- lng of D.B.L ---------------
-!!$  axis_l   = 'D.B.L [m]'
-!!$  axis_t   = ''
-!!$  axis_t   = trim(fln2(n))
-!!$  axis_b   = ''
-!!$  axis_b   = ''
-!!$
-!!$  xmin = minval(x) - (maxval(x)-minval(x))*0.02d0
-!!$  xmax = maxval(x) + (maxval(x)-minval(x))*0.02d0
-!!$  ymin = 0.04d0
-!!$  ymax = 0.06d0
-!!$
+  !---- lng of D.B.L ---------------
+  axis_l   = 'D.B.L [m]'
+  axis_t   = ''
+  axis_t   = trim(fln2(n))
+  axis_b   = ''
+  axis_b   = ''
+
+  xmin = minval(x) - (maxval(x)-minval(x))*0.02d0
+  xmax = maxval(x) + (maxval(x)-minval(x))*0.02d0
+  ymin = 0.03d0
+  ymax = 0.06d0
+
 !!$  pxmin = 0.55d0  ; pxmax = 0.9d0
 !!$  pymin = 0.85d0 ; pymax = 0.95d0  
-!!$    
-!!$  call set_window(xmin, xmax, ymin, ymax, trim(axis_b), trim(axis_l), trim(axis_t), pxmin, pxmax, pymin, pymax)
-!!$  call plot_line(iend, x(:,jend-2), dev_bl(:,jend-2), 1)
-!!$  !------------------------------------------
-!!$
+  pymin = pymin - pdy ; pymax = pymax - pdy
+  
+  call set_window(xmin, xmax, ymin, ymax, trim(axis_b), trim(axis_l), trim(axis_t), pxmin, pxmax, pymin, pymax)
+  call plot_line(iend, x(:,jend-2), dev_bl(:,jend-2), 1)
+  !------------------------------------------
+
+
+
+  !---- lng of D.B.L ---------------
+  axis_l   = 'dz [m]'
+  axis_t   = ''
+  axis_t   = trim(fln2(n))
+  axis_b   = ''
+  axis_b   = ''
+
+  xmin = minval(x) - (maxval(x)-minval(x))*0.02d0
+  xmax = maxval(x) + (maxval(x)-minval(x))*0.02d0
+  ymin = -2.00d0
+  ymax =  2.00d0
+
+!!$  pxmin = 0.55d0  ; pxmax = 0.9d0
+!!$  pymin = 0.85d0 ; pymax = 0.95d0  
+  pymin = pymin - pdy ; pymax = pymax - pdy
+  
+  call set_window(xmin, xmax, ymin, ymax, trim(axis_b), trim(axis_l), trim(axis_t), pxmin, pxmax, pymin, pymax)
+  call plot_line(iend, x(:,jend-2), dz_obs(:,jend-2)*10**3, 1)
+  call plot_line(iend, x(:,jend-2), dz_Mu (:,jend-2)*10**3, 9)
+  call plcol0(7)
+  call pljoin(x(1,1),0.0d0,x(iend,1),0.0d0)
+  !------------------------------------------
+
 !!$  !---- lng of dif_dz ---------------
 !!$  axis_l   = 'dif_dz [%] '
 !!$  axis_t   = ''
