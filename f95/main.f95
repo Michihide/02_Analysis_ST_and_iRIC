@@ -68,15 +68,6 @@ program main
 end program main
 
 
-!!$     do i = 1, iend
-!!$        do j = 1, jend
-!!$           lcl(i,j) = dz_Md(i,j) / (10**3 * 600)
-!!$           adv(i,j) = Md(i,j) * ibi(i,j)
-!!$           dff(i,j) = Df(i,j) * cbi(i,j)
-!!$           frc(i,j) = Md(i,j) * iei(i,j)
-!!$        enddo
-!!$     enddo
-
 
 
 subroutine set_arry
