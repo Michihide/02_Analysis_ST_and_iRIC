@@ -1,7 +1,7 @@
 program main
   use mndr
 
-  case  = '20170906_40_5x5'
+  case  = '20191205_2x2_8'
 
   call set_parameter  ! You should check first if you change soil diameter
   call read_fln       ; call read_arry ; call set_pss
@@ -18,14 +18,10 @@ program main
   do n = 1, nend, intbl
      call set_arry
      
-     ! ---- read vtk of ST (You should use this read_schalar_vtk after 2018)----
-!!$     call read_schalar_vtk(dep_obs, 4, 1, pss_st)    ;  call read_schalar_vtk(wl_obs,  4, 2, pss_st)
-!!$     call read_schalar_vtk(dev_bl,  4, 3, pss_st)    ;  call read_schalar_vtk(bl    ,  4, 4, pss_st)
-
      ! ---- read vtk of ST You should use this read_schalar_vtk after 2019 ----
-!!$     call read_schalar_vtk(dwl_obs, 5, 1, pss_st)    ;  call read_schalar_vtk(wl_obs,  5, 2, pss_st)
-!!$     call read_schalar_vtk(dev_bl,  5, 3, pss_st)    ;  call read_schalar_vtk(bl    ,  5, 4, pss_st)
-!!$     call read_schalar_vtk(dep_obs, 5, 5, pss_st)
+     call read_schalar_vtk(dwl_obs, 5, 1, pss_st)    ;  call read_schalar_vtk(wl_obs,  5, 2, pss_st)
+     call read_schalar_vtk(dev_bl,  5, 3, pss_st)    ;  call read_schalar_vtk(bl    ,  5, 4, pss_st)
+     call read_schalar_vtk(dep_obs, 5, 5, pss_st)
 
      ! ---- read vtk of iRIC ----
      call read_schalar_vtk(dep_cal, 6, 1, pss_iric)  ;  call read_schalar_vtk(wl_cal,  6, 2, pss_iric)
@@ -54,7 +50,7 @@ program main
      ! ---- cal perstent difference between 2 physical quantity ----
      diano = 'vrbl' ; call calclate_persent_difference(diano, dep_obs, dep_cal, dep_obs, dm, dif_dep)
      diano = 'cnst' ; call calclate_persent_difference(diano, dz_obs , dz_Ms  , dz_obs , dm, dif_dzs)
-     diano = 'cnst' ; call calclate_persent_difference(diano, dz_obs , dz_Mu  , dz_obs , dm, dif_dzu)
+     diano = 'vrbl' ; call calclate_persent_difference(diano, dz_obs , dz_Mu  , dz_obs , dm, dif_dzu)
           
      call cmp_each_item
 
@@ -64,6 +60,12 @@ program main
      ! ---- output schalar vtk  &  vector vtk ----
      call output_schalar_vtk
      call output_vector_vtk
+
+!!$     do i = 1, iend
+!!$        do j = 1, jend
+!!$           write(*,*)dz_obs(i,j), dz_Mu(i,j)           
+!!$        enddo
+!!$     enddo
 
      ! ---- drew some kinds of figure with plplot ----
      call drw_cntr
@@ -435,12 +437,18 @@ subroutine calculate_temporal_slope(slp_in, slp_out)
   real*8,intent(in)  :: slp_in(iend,jend,nend)
   real*8,intent(out) :: slp_out(iend,jend)
   
-  if(n.eq.nend)then
+!!$  if(n.eq.nend)then
+!!$     slp_out(:,:) = 0.0
+!!$  else
+!!$     slp_out(:,:) = (slp_in(:,:,n+intbl) - slp_in(:,:,n))
+!!$  endif
+
+  if(n.le.intbl)then
      slp_out(:,:) = 0.0
   else
-     slp_out(:,:) = (slp_in(:,:,n+intbl) - slp_in(:,:,n))
+     slp_out(:,:) = (slp_in(:,:,n) - slp_in(:,:,n-intbl))
   endif
-
+  
 end subroutine calculate_temporal_slope
 
 
@@ -650,7 +658,7 @@ subroutine calculate_M_equation_mpm_u(nb1, h, slp1, slp2, v, Pec, Aso, dzdt)
         if(fro.eq.1.5)then
            write(*,*)'Fr=1.5'
         endif
-        Aso(i,j) = Aso(i,j) * 10**3
+!!$        Aso(i,j) = Aso(i,j) * 10**3
         if(isnan(Aso(i,j)))then
            Aso(i,j) = 0.0
         endif
