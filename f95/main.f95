@@ -18,10 +18,10 @@ program main
   do n = 1, nend, intbl
      call set_arry
      
-     ! ---- read vtk of ST (updated 2019/12/05 for data of 2019) ----
-     call read_schalar_vtk(dwl_obs, 5, 1, pss_st)    ;  call read_schalar_vtk(wl_obs,  5, 2, pss_st)
-     call read_schalar_vtk(dev_bl,  5, 3, pss_st)    ;  call read_schalar_vtk(bl    ,  5, 4, pss_st)
-     call read_schalar_vtk(dep_obs, 5, 5, pss_st)
+!!$     ! ---- read vtk of ST (updated 2019/12/05 for data of 2019) ----
+!!$     call read_schalar_vtk(dwl_obs, 5, 1, pss_st)    ;  call read_schalar_vtk(wl_obs,  5, 2, pss_st)
+!!$     call read_schalar_vtk(dev_bl,  5, 3, pss_st)    ;  call read_schalar_vtk(bl    ,  5, 4, pss_st)
+!!$     call read_schalar_vtk(dep_obs, 5, 5, pss_st)
 
      ! ---- read vtk of iRIC ----
      call read_schalar_vtk(dep_cal, 6, 1, pss_iric)  ;  call read_schalar_vtk(wl_cal,  6, 2, pss_iric)
